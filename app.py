@@ -1,60 +1,65 @@
-import os
-import json
+from flask import Flask, Response, render_template, request, redirect, url_for
 import requests
-from flask import Flask, Response, render_template, request, jsonify
-from dotenv import load_dotenv
 
-# Load .env locally; on Render this will be supplied via Environment Variables
-load_dotenv()
+app = Flask(__name__)
 
-app = Flask(__name__, static_folder='static', template_folder='templates')
+# Initial cookie
+CURRENT_COOKIE = "Edge-Cache-Cookie=URLPrefix=aHR0cHM6Ly9ibGRjbXByb2QtY2RuLnRvZmZlZWxpdmUuY29t:Expires=1762061608:KeyName=prod_linear:Signature=DDuB11d3OvYte3cd5ivuqPhjPyf5OVfPugJAFHDG6nF1ZjjgwAAPbsyl7XszNtAWBxPyA3ARyZpP2p5lzt14AA"
 
 BASE = "https://bldcmprod-cdn.toffeelive.com"
-COOKIE = os.getenv('TOFFEE_COOKIE', '')
 
-# Home page
-@app.route('/')
+# -------------------------------
+# Public Player
+# -------------------------------
+@app.route("/")
 def index():
-    return render_template('index.html')
+    return render_template("index.html")
 
-# Channel list (from static/data/channels.json)
-@app.route('/channels')
+
+# -------------------------------
+# Admin Cookie Update
+# -------------------------------
+@app.route("/admin/cookie", methods=["GET", "POST"])
+def admin_cookie():
+    global CURRENT_COOKIE
+    message = ""
+    if request.method == "POST":
+        new_cookie = request.form.get("cookie")
+        if new_cookie:
+            CURRENT_COOKIE = new_cookie.strip()
+            message = "Cookie updated successfully!"
+    return render_template("admin/cookie_form.html", cookie_value=CURRENT_COOKIE, message=message)
+
+
+# -------------------------------
+# Channels JSON
+# -------------------------------
+@app.route("/channels")
 def get_channels():
-    with open(os.path.join(app.static_folder, 'data', 'channels.json'), 'r', encoding='utf-8') as f:
+    import json
+    with open("static/data/channels.json", "r", encoding="utf-8") as f:
         data = json.load(f)
-    return jsonify(data)
+    return data
 
-# Proxy only requests that start with /cdn/  (keeps other static routes untouched)
-@app.route('/cdn/<path:subpath>')
-def proxy_cdn(subpath):
-    # Build target url
-    target_url = f"{BASE}/cdn/{subpath}"
+
+# -------------------------------
+# Proxy route with CURRENT_COOKIE
+# -------------------------------
+@app.route("/<path:subpath>")
+def proxy(subpath):
+    url = f"{BASE}/{subpath}"
     if request.query_string:
-        target_url += f"?{request.query_string.decode()}"
+        url += f"?{request.query_string.decode()}"
 
-    # Construct headers
-    headers = {
-        'User-Agent': request.headers.get('User-Agent', 'Mozilla/5.0'),
-        'Referer': 'https://www.toffeelive.com/',
-        'Origin': 'https://www.toffeelive.com',
-        'Cookie': COOKIE
-    }
+    print(f"[DEBUG] Fetching URL: {url}")
+    r = requests.get(url, headers={"Cookie": CURRENT_COOKIE}, stream=True)
 
-    app.logger.info(f"[proxy] Fetching: {target_url}")
+    return Response(
+        r.iter_content(chunk_size=8192),
+        content_type=r.headers.get("content-type", "application/octet-stream"),
+        status=r.status_code,
+    )
 
-    # Stream response
-    resp = requests.get(target_url, headers=headers, stream=True, timeout=20)
 
-    # Build response preserving content-type
-    content_type = resp.headers.get('Content-Type', 'application/octet-stream')
-    return Response(resp.iter_content(chunk_size=8192), status=resp.status_code, content_type=content_type)
-
-# Optional catch-all proxy if needed (commented out)
-# @app.route('/<path:subpath>')
-# def proxy_all(subpath):
-#     # Use only if you need all paths proxied. Be careful with static files.
-#     ...
-
-if __name__ == '__main__':
-    # For local development
-    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)), debug=True)
+if __name__ == "__main__":
+    app.run(debug=True, port=5000)
