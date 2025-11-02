@@ -1,65 +1,65 @@
-from flask import Flask, Response, render_template, request, redirect, url_for
+from flask import Flask, Response, render_template, request, jsonify
 import requests
+import json
+import os
 
 app = Flask(__name__)
 
-# Initial cookie
-CURRENT_COOKIE = "Edge-Cache-Cookie=URLPrefix=aHR0cHM6Ly9ibGRjbXByb2QtY2RuLnRvZmZlZWxpdmUuY29t:Expires=1762241397:KeyName=prod_linear:Signature=Pdmcyqg9XU3_ZHk22P1OrMDEpw0-IntgURRL71gS89Tx-si1fQmkEiVOd8pXZ-pbH7HFDZtsjvqZsNCxJagIAQ"
-
+COOKIE_FILE = "static/data/cookie.json"
 BASE = "https://bldcmprod-cdn.toffeelive.com"
 
-# -------------------------------
-# Public Player
-# -------------------------------
+def get_cookie():
+    with open(COOKIE_FILE, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return data.get("TOFFEE_COOKIE", "")
+
+def set_cookie(new_cookie):
+    with open(COOKIE_FILE, "w", encoding="utf-8") as f:
+        json.dump({"TOFFEE_COOKIE": new_cookie}, f)
+
+# --- Frontend ---
 @app.route("/")
 def index():
     return render_template("index.html")
 
+@app.route("/admin")
+def admin():
+    return render_template("admin.html")
 
-# -------------------------------
-# Admin Cookie Update
-# -------------------------------
-@app.route("/admin/cookie", methods=["GET", "POST"])
-def admin_cookie():
-    global CURRENT_COOKIE
-    message = ""
-    if request.method == "POST":
-        new_cookie = request.form.get("cookie")
-        if new_cookie:
-            CURRENT_COOKIE = new_cookie.strip()
-            message = "Cookie updated successfully!"
-    return render_template("admin/index.html", cookie_value=CURRENT_COOKIE, message=message)
+# --- Cookie API ---
+@app.route("/api/get-cookie")
+def api_get_cookie():
+    return jsonify({"TOFFEE_COOKIE": get_cookie()})
 
+@app.route("/api/set-cookie", methods=["POST"])
+def api_set_cookie():
+    data = request.get_json()
+    if "TOFFEE_COOKIE" in data:
+        set_cookie(data["TOFFEE_COOKIE"])
+        return jsonify({"message": "Cookie updated successfully!"})
+    return jsonify({"message": "No cookie provided"}), 400
 
-# -------------------------------
-# Channels JSON
-# -------------------------------
+# --- Channels API ---
 @app.route("/channels")
 def get_channels():
-    import json
     with open("static/data/channels.json", "r", encoding="utf-8") as f:
         data = json.load(f)
-    return data
+    return jsonify(data)
 
-
-# -------------------------------
-# Proxy route with CURRENT_COOKIE
-# -------------------------------
+# --- Proxy for m3u8 & segment requests ---
 @app.route("/<path:subpath>")
 def proxy(subpath):
     url = f"{BASE}/{subpath}"
     if request.query_string:
         url += f"?{request.query_string.decode()}"
 
-    print(f"[DEBUG] Fetching URL: {url}")
-    r = requests.get(url, headers={"Cookie": CURRENT_COOKIE}, stream=True)
-
+    cookie = get_cookie()
+    r = requests.get(url, headers={"Cookie": cookie}, stream=True)
     return Response(
         r.iter_content(chunk_size=8192),
         content_type=r.headers.get("content-type", "application/octet-stream"),
         status=r.status_code,
     )
-
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
