@@ -4,7 +4,7 @@ import requests
 app = Flask(__name__)
 
 # Initial cookie
-CURRENT_COOKIE = "Edge-Cache-Cookie=URLPrefix=aHR0cHM6Ly9ibGRjbXByb2QtY2RuLnRvZmZlZWxpdmUuY29t:Expires=1762061608:KeyName=prod_linear:Signature=DDuB11d3OvYte3cd5ivuqPhjPyf5OVfPugJAFHDG6nF1ZjjgwAAPbsyl7XszNtAWBxPyA3ARyZpP2p5lzt14AA"
+CURRENT_COOKIE = "Edge-Cache-Cookie=URLPrefix=aHR0cHM6Ly9ibGRjbXByb2QtY2RuLnRvZmZlZWxpdmUuY29t:Expires=1762241397:KeyName=prod_linear:Signature=Pdmcyqg9XU3_ZHk22P1OrMDEpw0-IntgURRL71gS89Tx-si1fQmkEiVOd8pXZ-pbH7HFDZtsjvqZsNCxJagIAQ"
 
 BASE = "https://bldcmprod-cdn.toffeelive.com"
 
@@ -28,7 +28,7 @@ def admin_cookie():
         if new_cookie:
             CURRENT_COOKIE = new_cookie.strip()
             message = "Cookie updated successfully!"
-    return render_template("admin/cookie_form.html", cookie_value=CURRENT_COOKIE, message=message)
+    return render_template("admin/index.html", cookie_value=CURRENT_COOKIE, message=message)
 
 
 # -------------------------------
