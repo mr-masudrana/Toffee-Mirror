@@ -26,14 +26,16 @@ def get_channels():
 
 @app.route("/<path:subpath>")
 def proxy(subpath):
-    """Proxy the m3u8 and segment requests with cookie"""
     url = f"{BASE}/{subpath}"
     if request.query_string:
         url += f"?{request.query_string.decode()}"
 
-    print(f"Fetching: {url}")
+    print(f"[DEBUG] Fetching URL: {url}")
+    print(f"[DEBUG] Using Cookie: {COOKIE[:30]}...")  # শুধু শুরু অংশ দেখাব
 
     r = requests.get(url, headers={"Cookie": COOKIE}, stream=True)
+    print(f"[DEBUG] Response Status: {r.status_code}")
+
     return Response(
         r.iter_content(chunk_size=8192),
         content_type=r.headers.get("content-type", "application/octet-stream"),
