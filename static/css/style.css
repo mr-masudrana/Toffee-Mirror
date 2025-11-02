@@ -1,35 +1,12 @@
-.video-container {
-  position: sticky;
-  top: 0;
-  left: 0;
-  z-index: 999;
-  text-align: center;
-}
+body { background-color: #000; color: #fff; }
 
-.video-container video {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  background-color: #000;
-  border-radius: 5px 5px 0 0;
-}
+.navbar { z-index: 1050; }
 
-.channel-card {
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  background-color: #555;
-  border-radius: 10px;
-  overflow: hidden;
-}
-.channel-card:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 15px #0ff;
-}
-.channel-card.active {
-  border: 2px solid #0ff;
-}
+.video-container { position: sticky; top: 0; z-index: 1040; text-align: center; border-bottom: 2px solid #0ff; }
+.video-container video { width: 100%; height: 60vh; object-fit: contain; background-color: #000; }
 
-.category-btn.active {
-  background-color: #0ff;
-  color: #000;
-}
+.channel-card { cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; background-color: #111; border-radius: 10px; overflow: hidden; }
+.channel-card:hover { transform: scale(1.05); box-shadow: 0 0 15px #0ff; }
+.channel-card.active { border: 2px solid #0ff; }
+
+.category-btn.active { background-color: #0ff; color: #000; }
